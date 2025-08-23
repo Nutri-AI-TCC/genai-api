@@ -5,3 +5,5 @@ cohere
 mcp
 fastapi
 uvicorn
+cohere
+pinecone
