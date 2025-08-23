@@ -2,3 +2,6 @@ functions-framework==3.*
 llama-index
 llama-index-llms-cohere
 cohere
+mcp
+fastapi
+uvicorn
