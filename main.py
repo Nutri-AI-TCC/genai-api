@@ -12,7 +12,7 @@ from pinecone import Pinecone
 from typing import List, Dict
 
 
-ORACLE_API_URL = "https://g56e15c6771c555-nutriaidb.adb.sa-saopaulo-1.oraclecloudapps.com/ords/admin/chats/"
+ORACLE_API_URL = "https://g56e15c6771c555-nutriaidb.adb.sa-saopaulo-1.oraclecloudapps.com/ords/admin/historico/"
 
 @functions_framework.http
 def hello_http(request):
@@ -22,19 +22,16 @@ def hello_http(request):
     if request_json and 'prompt' in request_json:
         user_prompt = request_json['prompt']
 
-    if request_json and 'id_usuario' in request_json:
-        id_usuario = request_json['id_usuario']
-
     if request_json and 'id_paciente' in request_json:
         id_paciente = request_json['id_paciente']
 
-    if request_json and 'nm_chat' in request_json:
-        nm_chat = request_json['nm_chat']
+    if request_json and 'id_chat' in request_json:
+        id_chat = request_json['id_chat']
 
     
-    chats_por_nome = buscar_e_filtrar_chats(nm_chat=nm_chat, uid_usuario=id_usuario)
+    chats_por_nome = buscar_e_filtrar_chats(id_chat)
 
-    salvar_chat(id_usuario, user_prompt, nm_chat, id_paciente)
+    salvar_chat(id_chat, user_prompt, id_paciente, "USER")
 
     chats_simplificados = []
     for chat in chats_por_nome:
@@ -68,11 +65,11 @@ def hello_http(request):
         print("Nenhuma fonte foi recuperada.")
 
 
-    salvar_chat(id_usuario, resposta, nm_chat, id_paciente)
+    salvar_chat(id_chat, resposta, id_paciente, "AI")
 
     return resposta
 
-def salvar_chat(id_usuario, message, nm_chat, id_paciente):
+def salvar_chat(id_chat, message, id_paciente, remetente):
 
     
     print("Iniciando salvamento do chat no Oracle...")
@@ -80,11 +77,11 @@ def salvar_chat(id_usuario, message, nm_chat, id_paciente):
     data_de_criacao_iso = datetime.now(timezone.utc).isoformat()
 
     oracle_payload = {
-        "uid_usuario_chat":id_usuario,
-        "nm_chat": nm_chat,
+        "id_chat":id_chat,
         "ds_mensagens_chat": message,
         "id_paciente": id_paciente,
         "dt_criacao_chat": data_de_criacao_iso,
+        "tp_remetente": remetente
     }
 
     headers = {"Content-Type": "application/json"}
@@ -92,14 +89,11 @@ def salvar_chat(id_usuario, message, nm_chat, id_paciente):
     oracle_response = requests.post(ORACLE_API_URL, data=json.dumps(oracle_payload), headers=headers)
     oracle_response.raise_for_status()
     
-    print(f"Chat salvo com sucesso. ID: {id_usuario}")
-    return id_usuario
+    print(f"Chat salvo com sucesso. ID: {id_chat}")
+    return id_chat
 
 def get_chat_date(chat_record):
-    """
-    Função auxiliar segura para extrair e converter a data de um registro de chat.
-    Retorna um objeto datetime válido ou uma data mínima se a data for nula ou inválida.
-    """
+
     date_str = chat_record.get('dt_criacao_chat')
 
     if not date_str:
@@ -114,10 +108,8 @@ def get_chat_date(chat_record):
             print(f"AVISO: Não foi possível converter a data '{date_str}'. Tratando como antigo.")
             return datetime.min
 
-def buscar_e_filtrar_chats(id_chat=None, uid_usuario=None, nm_chat=None):
-    """
-    Busca todos os chats da API Oracle, filtra em memória e os ordena por data de forma segura.
-    """
+def buscar_e_filtrar_chats(id_chat):
+
     print("Buscando todos os chats da API...")
     try:
         response = requests.get(ORACLE_API_URL)
@@ -130,9 +122,8 @@ def buscar_e_filtrar_chats(id_chat=None, uid_usuario=None, nm_chat=None):
         resultados_filtrados = []
         for chat in todos_os_chats:
             match_id = (id_chat is None) or (str(chat.get('id_chat')) == str(id_chat))
-            match_uid = (uid_usuario is None) or (chat.get('uid_usuario_chat') == uid_usuario)
-            match_nm = (nm_chat is None) or (nm_chat.lower() in str(chat.get('nm_chat', '')).lower())
-            if match_id and match_uid and match_nm:
+            
+            if match_id:
                 resultados_filtrados.append(chat)
         
         print(f"Após a filtragem, restaram {len(resultados_filtrados)} chats.")
@@ -163,7 +154,7 @@ def buscar_e_responder(pergunta, chats_ordenados) -> Dict:
 
 
     PERSONA = """
-        **Você é "Nutri-Cortex", um Assistente de IA de suporte à decisão para nutricionistas.**
+        **Você é "NutriAI", um Assistente de IA de suporte à decisão para nutricionistas.**
 
         Sua função é processar, correlacionar e resumir informações da base de dados científicos e dos prontuários de pacientes. Você existe para otimizar o tempo do nutricionista, destacando informações relevantes.
 
@@ -214,7 +205,7 @@ def buscar_e_responder(pergunta, chats_ordenados) -> Dict:
 
 
         resposta_final = cliente_cohere.chat(
-            model="command-r",
+            model="command-a-03-2025",
             message=pergunta,
             documents=documentos_recuperados,
             preamble=PERSONA,
