@@ -15,7 +15,7 @@ Esta API funciona como um assistente de IA para nutricionistas. Ela recebe uma p
 Existe um único endpoint para interagir com o assistente.
 
 - **Método:** `POST`
-- **URL:** `https://<SUA_URL_DO_CLOUD_FUNCTION>`
+- **URL:** `[https://<SUA_URL_DO_CLOUD_FUNCTION>](https://us-central1-nutri-ai-463621.cloudfunctions.net/agent-pd)`
 
 ### Exemplo de Payload (O que você envia)
 
@@ -23,8 +23,7 @@ Você precisa enviar um JSON com os seguintes campos. O `prompt` é a sua pergun
 
 ```json
 {
-  "prompt": "Quais são as melhores fontes de proteína vegetal para um paciente com alergia a soja?",
-  "id_usuario": "f7a8b9c0-d1e2-f3a4-b5c6-d7e8f9a0b1c2",
-  "id_paciente": "pac_101",
-  "nm_chat": "chat_paciente_101_plano_alimentar"
+    "prompt": "Olá tudo bem?",
+    "id_paciente": 161,
+    "id_chat": 223
 }
